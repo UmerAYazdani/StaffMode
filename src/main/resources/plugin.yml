@@ -1,0 +1,71 @@
+name: StaffMode
+version: 1.0.1
+main: com.example.staffmode.StaffModePlugin
+api-version: "26.1"
+
+softdepend:
+  - MultiWorld
+  - Essentials
+  - InvSeePlusPlus
+
+commands:
+  staffmode:
+    description: Toggle staff mode
+    permission: staffmode.use
+    aliases:
+      - sm
+
+  punish:
+    description: Open punishment GUI for a player
+    usage: /punish <player>
+    permission: staffmode.gui
+
+  RandomInspectionTP:
+    description: Teleport to a random online player
+    permission: staffmode.randomtp
+    aliases:
+      - RIT
+      - rit
+
+  staffhours:
+    description: View staff hours
+    usage: /staffhours
+    permission: staffmode.hours
+    aliases:
+      - sh
+
+permissions:
+  staffmode.use:
+    default: op
+  staffmode.others:
+    default: op
+  staffmode.build.*:
+    default: op
+  staffmode.pickup:
+    default: false
+  staffmode.drop:
+    default: false
+  staffmode.randomtp:
+    default: op
+  staffmode.gui:
+    default: op
+  staffmode.gui.*:
+    default: op
+  staffmode.hours:
+    default: op
+  staffmode.gui.inspect:
+    default: op
+  staffmode.gui.enderchest:
+    default: op
+  staffmode.gui.mute:
+    default: op
+  staffmode.gui.ban:
+    default: op
+  staffmode.gui.kick:
+    default: op
+  staffmode.gui.offenses:
+    default: op
+  staffmode.gui.info:
+    default: op
+  staffmode.alerts:
+    default: op
