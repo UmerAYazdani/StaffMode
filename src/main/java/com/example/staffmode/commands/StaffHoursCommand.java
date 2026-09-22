@@ -11,14 +11,19 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Handles /staffhours and /sh and opens the staff-hours player selection GUI.
+ */
 public class StaffHoursCommand implements CommandExecutor, TabCompleter {
 
     private final StaffHoursGui staffHoursGui;
 
+    // Stores the staff-hours GUI used by /staffhours.
     public StaffHoursCommand(StaffHoursGui staffHoursGui) {
         this.staffHoursGui = staffHoursGui;
     }
 
+    // Handles execution of this command and validates sender, permissions, and arguments.
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
@@ -35,6 +40,7 @@ public class StaffHoursCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    // Returns tab-completion suggestions for this command.
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         return new ArrayList<>();

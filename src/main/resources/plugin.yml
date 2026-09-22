@@ -1,5 +1,8 @@
+# Paper plugin descriptor for StaffMode.
+# Commands and permissions listed here must match the names used in the Java code.
+
 name: StaffMode
-version: 1.0.1
+version: 1.0.3
 main: com.example.staffmode.StaffModePlugin
 api-version: "26.1"
 
@@ -9,8 +12,10 @@ softdepend:
   - InvSeePlusPlus
 
 commands:
+
   staffmode:
     description: Toggle staff mode
+    usage: /staffmode
     permission: staffmode.use
     aliases:
       - sm
@@ -22,6 +27,7 @@ commands:
 
   RandomInspectionTP:
     description: Teleport to a random online player
+    usage: /RandomInspectionTP
     permission: staffmode.randomtp
     aliases:
       - RIT
@@ -34,38 +40,122 @@ commands:
     aliases:
       - sh
 
+  staffnotes:
+    description: Open the shared staff progress notes
+    usage: /staffnotes
+    permission: staffmode.notes.staff.view
+    aliases:
+      - sn
+
+  modnotes:
+    description: Open the shared moderation notes
+    usage: /modnotes
+    permission: staffmode.notes.mod.view
+    aliases:
+      - mn
+
+
 permissions:
+
   staffmode.use:
+    description: Allows use of staff mode
     default: op
+
   staffmode.others:
+    description: Allows toggling staff mode for other players
     default: op
+
   staffmode.build.*:
+    description: Allows building in all worlds while staff build mode is enabled
     default: op
+
   staffmode.pickup:
+    description: Allows item pickup while in staff mode
     default: false
+
   staffmode.drop:
+    description: Allows item dropping while in staff mode
     default: false
+
   staffmode.randomtp:
+    description: Allows use of random inspection teleport
     default: op
+
   staffmode.gui:
+    description: Allows access to the staff punishment GUI
     default: op
+
   staffmode.gui.*:
+    description: Allows access to all staff GUI options
     default: op
-  staffmode.hours:
-    default: op
+
   staffmode.gui.inspect:
+    description: Allows inspecting player inventories
     default: op
+
   staffmode.gui.enderchest:
+    description: Allows viewing player ender chests
     default: op
+
   staffmode.gui.mute:
+    description: Allows muting players through the staff GUI
     default: op
+
   staffmode.gui.ban:
+    description: Allows banning players through the staff GUI
     default: op
+
   staffmode.gui.kick:
+    description: Allows kicking players through the staff GUI
     default: op
+
   staffmode.gui.offenses:
+    description: Allows viewing player offenses
     default: op
+
   staffmode.gui.info:
+    description: Allows viewing player information
     default: op
+
   staffmode.alerts:
+    description: Allows receiving staff offense alerts
+    default: op
+
+
+  # -------------------------
+  # STAFF HOURS
+  # -------------------------
+
+  staffmode.hours:
+    description: Allows staff to view their own staff hours
+    default: op
+
+  staffmode.hours.others:
+    description: Allows staff to view every staff member's hours
+    default: op
+
+
+  # -------------------------
+  # GENERAL STAFF NOTES
+  # -------------------------
+
+  staffmode.notes.staff.view:
+    description: Allows viewing the shared general staff notes
+    default: op
+
+  staffmode.notes.staff.add:
+    description: Allows creating general staff progress notes
+    default: op
+
+
+  # -------------------------
+  # MODERATION NOTES
+  # -------------------------
+
+  staffmode.notes.mod.view:
+    description: Allows viewing the shared moderation notes
+    default: op
+
+  staffmode.notes.mod.add:
+    description: Allows creating moderation notes
     default: op

@@ -32,6 +32,9 @@ import java.util.UUID;
 
 import static com.example.staffmode.util.ItemUtil.menuItem;
 
+/**
+ * Builds and handles the moderation GUI for inventory inspection, ender chest viewing, mute, ban, kick, offense history, and player information.
+ */
 public class StaffPunishGui implements Listener {
 
     private final JavaPlugin plugin;
@@ -50,6 +53,7 @@ public class StaffPunishGui implements Listener {
         this.offenseManager = offenseManager;
     }
 
+    // Stores the selected target and opens the main moderation GUI for that player.
     public void openStaffMainMenu(Player staff, OfflinePlayer target) {
         selectedTargets.put(staff.getUniqueId(), target.getUniqueId());
         Inventory menu = Bukkit.createInventory(null, 27, "Staff Menu: " + target.getName());
@@ -74,6 +78,7 @@ public class StaffPunishGui implements Listener {
     }
 
     @EventHandler
+    // Opens the staff moderation GUI when an authorized staff member punches another player while in staff mode.
     public void onPunchPlayer(EntityDamageByEntityEvent event) {
         if (!(event.getDamager() instanceof Player staff)) {
             return;
@@ -98,6 +103,7 @@ public class StaffPunishGui implements Listener {
     }
 
     @EventHandler
+    // Routes clicks from the different moderation GUI screens to the correct handler.
     public void onStaffMenuClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player staff)) {
             return;
@@ -122,6 +128,7 @@ public class StaffPunishGui implements Listener {
         }
     }
 
+    // Handles buttons on the main moderation menu.
     private void handleStaffMainMenuClick(InventoryClickEvent event, Player staff) {
         event.setCancelled(true);
         ItemStack clicked = event.getCurrentItem();
@@ -197,6 +204,7 @@ public class StaffPunishGui implements Listener {
         }
     }
 
+    // Handles mute duration, unmute, and back buttons.
     private void handleMuteClick(InventoryClickEvent event, Player staff) {
         event.setCancelled(true);
         OfflinePlayer target = getSelectedTarget(staff);
@@ -239,6 +247,7 @@ public class StaffPunishGui implements Listener {
         }
     }
 
+    // Handles permanent/temporary ban duration and back buttons.
     private void handleBanClick(InventoryClickEvent event, Player staff) {
         event.setCancelled(true);
         OfflinePlayer target = getSelectedTarget(staff);
@@ -276,6 +285,7 @@ public class StaffPunishGui implements Listener {
         }
     }
 
+    // Handles viewing/removing stored offenses and returning to the main menu.
     private void handleOffensesClick(InventoryClickEvent event, Player staff) {
         event.setCancelled(true);
         OfflinePlayer target = getSelectedTarget(staff);
@@ -306,6 +316,7 @@ public class StaffPunishGui implements Listener {
         }
     }
 
+    // Returns the player currently selected by this staff member in the moderation GUI.
     private OfflinePlayer getSelectedTarget(Player staff) {
         UUID targetUuid = selectedTargets.get(staff.getUniqueId());
 
@@ -316,6 +327,7 @@ public class StaffPunishGui implements Listener {
         return Bukkit.getOfflinePlayer(targetUuid);
     }
 
+    // Sends stored and live player information to the staff member in chat.
     private void sendPlayerInfo(Player staff, OfflinePlayer target) {
         long firstPlayed = target.getFirstPlayed();
         long lastPlayed = target.getLastPlayed();
@@ -333,6 +345,7 @@ public class StaffPunishGui implements Listener {
         }
     }
 
+    // Builds and opens the mute-duration menu.
     private void openMuteMenu(Player staff, OfflinePlayer target) {
         Inventory menu = Bukkit.createInventory(null, 27, "Mute: " + target.getName());
 
@@ -347,6 +360,7 @@ public class StaffPunishGui implements Listener {
         staff.openInventory(menu);
     }
 
+    // Builds and opens the ban-duration menu.
     private void openBanMenu(Player staff, OfflinePlayer target) {
         Inventory menu = Bukkit.createInventory(null, 27, "Ban: " + target.getName());
 
@@ -360,6 +374,7 @@ public class StaffPunishGui implements Listener {
         staff.openInventory(menu);
     }
 
+    // Opens the AnvilGUI text prompt, executes the punishment command, and stores the offense reason.
     private void promptReason(Player staff, OfflinePlayer target, String type, String command, String duration) {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             new AnvilGUI.Builder()
@@ -389,6 +404,7 @@ public class StaffPunishGui implements Listener {
         }, 1L);
     }
 
+    // Builds the offense-history inventory from the target player's YAML file.
     private void openOffensesMenu(Player staff, OfflinePlayer target) {
         Inventory menu = Bukkit.createInventory(null, 54, "Offenses: " + target.getName());
         File file = offenseManager.getOffenseFile(target);

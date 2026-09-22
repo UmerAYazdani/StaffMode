@@ -21,6 +21,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Contains the core staff-mode logic: save/restore player state, enter/leave staff mode, and manage build/drop/pickup toggles.
+ */
 public class StaffModeManager {
 
     private final JavaPlugin plugin;
@@ -31,26 +34,31 @@ public class StaffModeManager {
     private final Set<UUID> pickupEnabled = new HashSet<>();
     private final Set<UUID> buildEnabled = new HashSet<>();
 
+    // Stores the plugin/staff-hours dependencies and points this manager at the playerdata folder.
     public StaffModeManager(JavaPlugin plugin, StaffHoursManager staffHoursManager) {
         this.plugin = plugin;
         this.staffHoursManager = staffHoursManager;
         this.playerDataFolder = new File(plugin.getDataFolder(), "playerdata");
     }
 
+    // Creates this feature's data folder if it does not already exist.
     public void createFolders() {
         if (!playerDataFolder.exists()) {
             playerDataFolder.mkdirs();
         }
     }
 
+    // Returns the YAML file used to remember this player's pre-staff-mode state.
     public File getPlayerFile(Player player) {
         return new File(playerDataFolder, player.getUniqueId() + ".yml");
     }
 
+    // Uses the existence of the player-data file to determine whether the player is currently in staff mode.
     public boolean isInStaffMode(Player player) {
         return getPlayerFile(player).exists();
     }
 
+    // Turns staff mode on or off for the player who ran the command.
     public void toggleSelf(Player player) {
         File file = getPlayerFile(player);
 
@@ -64,6 +72,7 @@ public class StaffModeManager {
         }
     }
 
+    // Turns staff mode on or off for another online player.
     public void toggleOther(Player sender, Player target) {
         File targetFile = getPlayerFile(target);
 
@@ -79,6 +88,7 @@ public class StaffModeManager {
         }
     }
 
+    // Saves the player's current inventory, location, game mode, health, food, flight state, experience, and potion effects before staff mode changes them.
     public void savePlayer(Player player, File file) {
         YamlConfiguration config = new YamlConfiguration();
 
@@ -108,6 +118,7 @@ public class StaffModeManager {
         save(config, file);
     }
 
+    // Clears normal inventory/equipment, enables creative flight, normalizes survival values, and starts staff-hours tracking.
     public void enterStaffMode(Player player) {
         player.getInventory().clear();
         player.getInventory().setArmorContents(null);
@@ -130,6 +141,7 @@ public class StaffModeManager {
         player.updateInventory();
     }
 
+    // Restores the exact player state saved before staff mode and then clears temporary staff-mode state.
     public void restorePlayer(Player player, File file) {
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
 
@@ -198,6 +210,7 @@ public class StaffModeManager {
         buildEnabled.remove(player.getUniqueId());
     }
 
+    // Toggles whether this staff member may drop items while in staff mode.
     public boolean toggleDrop(Player player) {
         if (!isInStaffMode(player)) {
             player.sendMessage(ChatColor.RED + "You must be in staff mode to toggle item dropping.");
@@ -222,6 +235,7 @@ public class StaffModeManager {
         return true;
     }
 
+    // Toggles whether this staff member may pick up items while in staff mode.
     public boolean togglePickup(Player player) {
         if (!isInStaffMode(player)) {
             player.sendMessage(ChatColor.RED + "You must be in staff mode to toggle item pickup.");
@@ -246,6 +260,7 @@ public class StaffModeManager {
         return true;
     }
 
+    // Toggles whether this staff member may build in the current world while in staff mode.
     public boolean toggleBuild(Player player) {
         if (!isInStaffMode(player)) {
             player.sendMessage(ChatColor.RED + "You must be in staff mode to toggle building.");
@@ -272,20 +287,24 @@ public class StaffModeManager {
         return true;
     }
 
+    // Checks both the temporary build toggle and the world-specific build permission.
     public boolean canBuildInThisWorld(Player player) {
         String worldName = player.getWorld().getName();
         boolean hasWorldPermission = player.hasPermission("staffmode.build.*") || player.hasPermission("staffmode.build." + worldName);
         return buildEnabled.contains(player.getUniqueId()) && hasWorldPermission;
     }
 
+    // Returns whether the player currently has the temporary staff-mode drop toggle enabled.
     public boolean isDropEnabled(Player player) {
         return dropEnabled.contains(player.getUniqueId());
     }
 
+    // Returns whether the player currently has the temporary staff-mode pickup toggle enabled.
     public boolean isPickupEnabled(Player player) {
         return pickupEnabled.contains(player.getUniqueId());
     }
 
+    // Writes the supplied YAML configuration to disk and logs an error if saving fails.
     private void save(YamlConfiguration config, File file) {
         try {
             config.save(file);

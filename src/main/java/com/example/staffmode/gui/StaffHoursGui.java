@@ -34,6 +34,9 @@ import java.util.UUID;
 
 import static com.example.staffmode.util.ItemUtil.menuItem;
 
+/**
+ * Builds and handles the staff-hours GUI for staff members, months, weeks, and the current week.
+ */
 public class StaffHoursGui implements Listener {
 
     private final JavaPlugin plugin;
@@ -43,11 +46,24 @@ public class StaffHoursGui implements Listener {
     private final Map<UUID, UUID> staffHoursSelectedTarget = new HashMap<>();
     private final Map<UUID, Integer> staffHoursSelectedMonth = new HashMap<>();
 
+    // Stores the plugin and staff-hours manager used to build the GUI.
     public StaffHoursGui(JavaPlugin plugin, StaffHoursManager staffHoursManager) {
         this.plugin = plugin;
         this.staffHoursManager = staffHoursManager;
     }
+    /**
+     * Opens the staff member's own hours without showing the full staff list.
+     */
+    public void openOwnStaffHours(Player staff) {
 
+        UUID uuid = staff.getUniqueId();
+
+        staffHoursSelectedTarget.put(staff.getUniqueId(), uuid);
+
+        openStaffHoursMonthsMenu(staff, uuid);
+    }
+
+    // Builds the first staff-hours GUI containing one player head per tracked staff member.
     public void openStaffHoursPlayersMenu(Player admin) {
         Inventory menu = Bukkit.createInventory(null, 54, "Staff Hours");
         File[] files = staffHoursManager.getStaffHoursFolder().listFiles((dir, name) -> name.endsWith(".yml"));
@@ -106,6 +122,7 @@ public class StaffHoursGui implements Listener {
         admin.openInventory(menu);
     }
 
+    // Builds the yearly month view and includes a shortcut to the current week.
     private void openStaffHoursMonthsMenu(Player admin, UUID targetUuid) {
         int year = LocalDate.now().getYear();
         YamlConfiguration config = YamlConfiguration.loadConfiguration(staffHoursManager.getStaffHoursFile(targetUuid));
@@ -165,6 +182,7 @@ public class StaffHoursGui implements Listener {
         admin.openInventory(menu);
     }
 
+    // Shows the selected staff member's total for the current Monday-through-Sunday week.
     private void openStaffHoursCurrentWeekMenu(Player admin, UUID targetUuid) {
         YamlConfiguration config = YamlConfiguration.loadConfiguration(staffHoursManager.getStaffHoursFile(targetUuid));
         String name = config.getString("name", "Unknown");
@@ -194,6 +212,7 @@ public class StaffHoursGui implements Listener {
         admin.openInventory(menu);
     }
 
+    // Splits the selected month into seven-day chunks and shows tracked time for each chunk.
     private void openStaffHoursWeeksMenu(Player admin, UUID targetUuid, int month) {
         int year = LocalDate.now().getYear();
         YamlConfiguration config = YamlConfiguration.loadConfiguration(staffHoursManager.getStaffHoursFile(targetUuid));
@@ -250,6 +269,7 @@ public class StaffHoursGui implements Listener {
     }
 
     @EventHandler
+    // Handles navigation clicks in all staff-hours GUI screens.
     public void onStaffHoursClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player staff)) {
             return;
@@ -285,7 +305,13 @@ public class StaffHoursGui implements Listener {
             }
 
             if (clicked.getType() == Material.ARROW) {
-                openStaffHoursPlayersMenu(staff);
+
+                if (staff.hasPermission("staffmode.hours.others")) {
+                    openStaffHoursPlayersMenu(staff);
+                } else {
+                    staff.closeInventory();
+                }
+
                 return;
             }
 

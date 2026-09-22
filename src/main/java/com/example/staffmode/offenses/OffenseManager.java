@@ -11,24 +11,31 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Date;
 
+/**
+ * Stores moderation offenses in YAML files, removes offenses, and alerts staff when a player with past offenses joins.
+ */
 public class OffenseManager {
 
     private final File offensesFolder;
 
+    // Stores the plugin reference and prepares access to the offenses folder.
     public OffenseManager(JavaPlugin plugin) {
         this.offensesFolder = new File(plugin.getDataFolder(), "offenses");
     }
 
+    // Creates this feature's data folder if it does not already exist.
     public void createFolders() {
         if (!offensesFolder.exists()) {
             offensesFolder.mkdirs();
         }
     }
 
+    // Returns the YAML file containing the selected player's stored offenses.
     public File getOffenseFile(OfflinePlayer target) {
         return new File(offensesFolder, target.getUniqueId() + ".yml");
     }
 
+    // Appends a new punishment record to the target player's offense history.
     public void addOffense(Player staff, OfflinePlayer target, String type, String reason, String duration) {
         File file = getOffenseFile(target);
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
@@ -45,6 +52,7 @@ public class OffenseManager {
         save(config, file);
     }
 
+    // Deletes one offense and shifts later offense IDs down so the list stays sequential.
     public void removeOffense(OfflinePlayer target, int offenseId) {
         File file = getOffenseFile(target);
 
@@ -68,6 +76,7 @@ public class OffenseManager {
         save(config, file);
     }
 
+    // Alerts staff with the proper permission when a joining player has stored offenses.
     public void sendJoinAlertIfNeeded(Player joined) {
         File file = getOffenseFile(joined);
 
@@ -93,6 +102,7 @@ public class OffenseManager {
         }
     }
 
+    // Writes the supplied YAML configuration to disk and logs an error if saving fails.
     private void save(YamlConfiguration config, File file) {
         try {
             config.save(file);

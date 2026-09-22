@@ -21,6 +21,9 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
+/**
+ * Listens for player/server events that affect staff mode, activity tracking, building, item dropping/pickup, teleporting, joining, and quitting.
+ */
 public class StaffModeListener implements Listener {
 
     private final JavaPlugin plugin;
@@ -39,6 +42,7 @@ public class StaffModeListener implements Listener {
     }
 
     @EventHandler
+    // Ends active tracking and clears temporary activity state when a staff member leaves the server.
     public void onStaffQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
 
@@ -50,6 +54,7 @@ public class StaffModeListener implements Listener {
     }
 
     @EventHandler
+    // Restarts staff tracking when needed and checks whether the joining player has past offenses.
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player joined = event.getPlayer();
 
@@ -61,6 +66,7 @@ public class StaffModeListener implements Listener {
     }
 
     @EventHandler
+    // Counts real block-to-block movement as staff activity so active staff do not become AFK.
     public void onStaffMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
 
@@ -82,16 +88,19 @@ public class StaffModeListener implements Listener {
     }
 
     @EventHandler
+    // Counts player interaction as staff activity.
     public void onStaffInteract(PlayerInteractEvent event) {
         staffHoursManager.markStaffActive(event.getPlayer(), staffModeManager);
     }
 
     @EventHandler
+    // Counts running a command as staff activity.
     public void onStaffCommand(PlayerCommandPreprocessEvent event) {
         staffHoursManager.markStaffActive(event.getPlayer(), staffModeManager);
     }
 
     @EventHandler
+    // Re-applies creative mode and flight after a staff-mode teleport.
     public void onTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
 
@@ -109,6 +118,7 @@ public class StaffModeListener implements Listener {
     }
 
     @EventHandler
+    // Cancels block placement in staff mode unless the build toggle and permission allow it.
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
 
@@ -123,6 +133,7 @@ public class StaffModeListener implements Listener {
     }
 
     @EventHandler
+    // Cancels block breaking in staff mode unless the build toggle and permission allow it.
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
 
@@ -137,6 +148,7 @@ public class StaffModeListener implements Listener {
     }
 
     @EventHandler
+    // Blocks item dropping in staff mode unless the player has permission and has enabled the drop toggle.
     public void onItemDrop(PlayerDropItemEvent event) {
         Player player = event.getPlayer();
 
@@ -157,6 +169,7 @@ public class StaffModeListener implements Listener {
     }
 
     @EventHandler
+    // Blocks item pickup in staff mode unless the player has permission and has enabled the pickup toggle.
     public void onItemPickup(EntityPickupItemEvent event) {
         if (!(event.getEntity() instanceof Player player)) {
             return;

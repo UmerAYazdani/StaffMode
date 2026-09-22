@@ -13,14 +13,19 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Handles /punish <player> and opens the punishment GUI for an online or previously joined player.
+ */
 public class PunishCommand implements CommandExecutor, TabCompleter {
 
     private final StaffPunishGui staffPunishGui;
 
+    // Stores the punishment GUI used by /punish.
     public PunishCommand(StaffPunishGui staffPunishGui) {
         this.staffPunishGui = staffPunishGui;
     }
 
+    // Handles execution of this command and validates sender, permissions, and arguments.
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
@@ -49,6 +54,7 @@ public class PunishCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    // Returns tab-completion suggestions for this command.
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> completions = new ArrayList<>();

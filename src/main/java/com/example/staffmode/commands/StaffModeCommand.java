@@ -12,14 +12,19 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Handles /staffmode and /sm, including self toggle, build/drop/pickup subcommands, other-player toggles, invalid-command handling, and tab completion.
+ */
 public class StaffModeCommand implements CommandExecutor, TabCompleter {
 
     private final StaffModeManager staffModeManager;
 
+    // Stores the staff-mode manager used by /sm.
     public StaffModeCommand(StaffModeManager staffModeManager) {
         this.staffModeManager = staffModeManager;
     }
 
+    // Handles execution of this command and validates sender, permissions, and arguments.
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
@@ -72,6 +77,7 @@ public class StaffModeCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    // Returns tab-completion suggestions for this command.
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> completions = new ArrayList<>();

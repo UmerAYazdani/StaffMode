@@ -12,6 +12,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
+/**
+ * Alternative player-data/staff-mode manager retained in the project. It saves/restores player state and controls staff-mode toggles.
+ */
 public class PlayerDataManager {
 
     private final JavaPlugin plugin;
@@ -22,20 +25,24 @@ public class PlayerDataManager {
     private final Set<UUID> pickupEnabled = new HashSet<>();
     private final Set<UUID> buildEnabled = new HashSet<>();
 
+    // Stores dependencies used for player data and staff-mode restoration.
     public PlayerDataManager(JavaPlugin plugin, File playerDataFolder, StaffHoursManager staffHoursManager) {
         this.plugin = plugin;
         this.playerDataFolder = playerDataFolder;
         this.staffHoursManager = staffHoursManager;
     }
 
+    // Returns the YAML file used to remember this player's pre-staff-mode state.
     public File getPlayerFile(Player player) {
         return new File(playerDataFolder, player.getUniqueId() + ".yml");
     }
 
+    // Uses the existence of the player-data file to determine whether the player is currently in staff mode.
     public boolean isInStaffMode(Player player) {
         return getPlayerFile(player).exists();
     }
 
+    // Turns staff mode on or off for the player who ran the command.
     public void toggleOwnStaffMode(Player player) {
         File file = getPlayerFile(player);
 
@@ -49,6 +56,7 @@ public class PlayerDataManager {
         }
     }
 
+    // Turns staff mode on or off for another online player.
     public void toggleOtherStaffMode(Player staff, Player target) {
         File targetFile = getPlayerFile(target);
 
@@ -64,6 +72,7 @@ public class PlayerDataManager {
         }
     }
 
+    // Toggles whether this staff member may drop items while in staff mode.
     public boolean toggleDrop(Player player) {
         if (!isInStaffMode(player)) {
             player.sendMessage(ChatColor.RED + "You must be in staff mode to toggle item dropping.");
@@ -88,6 +97,7 @@ public class PlayerDataManager {
         return true;
     }
 
+    // Toggles whether this staff member may pick up items while in staff mode.
     public boolean togglePickup(Player player) {
         if (!isInStaffMode(player)) {
             player.sendMessage(ChatColor.RED + "You must be in staff mode to toggle item pickup.");
@@ -112,6 +122,7 @@ public class PlayerDataManager {
         return true;
     }
 
+    // Toggles whether this staff member may build in the current world while in staff mode.
     public boolean toggleBuild(Player player) {
         if (!isInStaffMode(player)) {
             player.sendMessage(ChatColor.RED + "You must be in staff mode to toggle building.");
@@ -138,6 +149,7 @@ public class PlayerDataManager {
         return true;
     }
 
+    // Checks both the temporary build toggle and the world-specific build permission.
     public boolean canBuildInThisWorld(Player player) {
         String worldName = player.getWorld().getName();
         boolean hasWorldPermission = player.hasPermission("staffmode.build.*")
@@ -145,14 +157,17 @@ public class PlayerDataManager {
         return buildEnabled.contains(player.getUniqueId()) && hasWorldPermission;
     }
 
+    // Checks whether staff-mode item dropping is currently allowed for the player.
     public boolean canDrop(Player player) {
         return player.hasPermission("staffmode.drop") && dropEnabled.contains(player.getUniqueId());
     }
 
+    // Checks whether staff-mode item pickup is currently allowed for the player.
     public boolean canPickup(Player player) {
         return player.hasPermission("staffmode.pickup") && pickupEnabled.contains(player.getUniqueId());
     }
 
+    // Saves the player's current inventory, location, game mode, health, food, flight state, experience, and potion effects before staff mode changes them.
     public void savePlayer(Player player, File file) {
         YamlConfiguration config = new YamlConfiguration();
 
@@ -186,6 +201,7 @@ public class PlayerDataManager {
         }
     }
 
+    // Clears normal inventory/equipment, enables creative flight, normalizes survival values, and starts staff-hours tracking.
     public void enterStaffMode(Player player) {
         player.getInventory().clear();
         player.getInventory().setArmorContents(null);
@@ -208,6 +224,7 @@ public class PlayerDataManager {
         player.updateInventory();
     }
 
+    // Restores the exact player state saved before staff mode and then clears temporary staff-mode state.
     public void restorePlayer(Player player, File file) {
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
 
@@ -264,6 +281,7 @@ public class PlayerDataManager {
         buildEnabled.remove(player.getUniqueId());
     }
 
+    // Returns the plugin instance owned by this manager.
     public JavaPlugin getPlugin() {
         return plugin;
     }

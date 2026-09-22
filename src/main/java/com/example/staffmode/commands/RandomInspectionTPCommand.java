@@ -13,14 +13,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+/**
+ * Handles the random inspection teleport command and sends staff to a random online player while in staff mode.
+ */
 public class RandomInspectionTPCommand implements CommandExecutor, TabCompleter {
 
     private final StaffModeManager staffModeManager;
 
+    // Stores the staff-mode manager used to validate random teleports.
     public RandomInspectionTPCommand(StaffModeManager staffModeManager) {
         this.staffModeManager = staffModeManager;
     }
 
+    // Handles execution of this command and validates sender, permissions, and arguments.
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
@@ -57,6 +62,7 @@ public class RandomInspectionTPCommand implements CommandExecutor, TabCompleter 
         return true;
     }
 
+    // Returns tab-completion suggestions for this command.
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         return new ArrayList<>();
