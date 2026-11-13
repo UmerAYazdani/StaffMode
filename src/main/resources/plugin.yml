@@ -1,13 +1,11 @@
-# Paper plugin descriptor for StaffMode.
-# Commands and permissions listed here must match the names used in the Java code.
-
 name: StaffMode
-version: 1.0.3
+version: 1.0.4
 main: com.example.staffmode.StaffModePlugin
-api-version: "26.1"
+api-version: "26.3"
 
 softdepend:
-  - MultiWorld
+  - Multiverse-Core
+  - Multiverse-Inventories
   - Essentials
   - InvSeePlusPlus
 

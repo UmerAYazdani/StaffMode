@@ -22,7 +22,14 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Contains the core staff-mode logic: save/restore player state, enter/leave staff mode, and manage build/drop/pickup toggles.
+ * Handles the core StaffMode system.
+ *
+ * This class:
+ * - Saves the player's normal state
+ * - Enters StaffMode
+ * - Restores the player when StaffMode ends
+ * - Handles build/drop/pickup toggles
+ * - Re-applies StaffMode after world changes
  */
 public class StaffModeManager {
 
@@ -30,286 +37,963 @@ public class StaffModeManager {
     private final StaffHoursManager staffHoursManager;
     private final File playerDataFolder;
 
-    private final Set<UUID> dropEnabled = new HashSet<>();
-    private final Set<UUID> pickupEnabled = new HashSet<>();
-    private final Set<UUID> buildEnabled = new HashSet<>();
+    private final Set<UUID> dropEnabled =
+            new HashSet<>();
 
-    // Stores the plugin/staff-hours dependencies and points this manager at the playerdata folder.
-    public StaffModeManager(JavaPlugin plugin, StaffHoursManager staffHoursManager) {
+    private final Set<UUID> pickupEnabled =
+            new HashSet<>();
+
+    private final Set<UUID> buildEnabled =
+            new HashSet<>();
+
+    /**
+     * Creates the StaffMode manager.
+     */
+    public StaffModeManager(
+            JavaPlugin plugin,
+            StaffHoursManager staffHoursManager
+    ) {
+
         this.plugin = plugin;
         this.staffHoursManager = staffHoursManager;
-        this.playerDataFolder = new File(plugin.getDataFolder(), "playerdata");
+
+        this.playerDataFolder =
+                new File(
+                        plugin.getDataFolder(),
+                        "playerdata"
+                );
     }
 
-    // Creates this feature's data folder if it does not already exist.
+    /**
+     * Creates the player data folder.
+     */
     public void createFolders() {
+
         if (!playerDataFolder.exists()) {
             playerDataFolder.mkdirs();
         }
     }
 
-    // Returns the YAML file used to remember this player's pre-staff-mode state.
+    /**
+     * Returns the file containing the player's
+     * normal state before entering StaffMode.
+     */
     public File getPlayerFile(Player player) {
-        return new File(playerDataFolder, player.getUniqueId() + ".yml");
+
+        return new File(
+                playerDataFolder,
+                player.getUniqueId() + ".yml"
+        );
     }
 
-    // Uses the existence of the player-data file to determine whether the player is currently in staff mode.
+    /**
+     * Checks whether a player is currently
+     * in StaffMode.
+     */
     public boolean isInStaffMode(Player player) {
+
         return getPlayerFile(player).exists();
     }
 
-    // Turns staff mode on or off for the player who ran the command.
+    /**
+     * Toggles StaffMode for yourself.
+     */
     public void toggleSelf(Player player) {
-        File file = getPlayerFile(player);
 
+        File file =
+                getPlayerFile(player);
+
+        /*
+         * Already in StaffMode.
+         * Turn it off.
+         */
         if (file.exists()) {
-            restorePlayer(player, file);
-            player.sendMessage(ChatColor.GREEN + "Staff mode disabled.");
-        } else {
-            savePlayer(player, file);
-            enterStaffMode(player);
-            player.sendMessage(ChatColor.AQUA + "Staff mode enabled.");
+
+            restorePlayer(
+                    player,
+                    file
+            );
+
+            player.sendMessage(
+                    ChatColor.GREEN
+                            + "Staff mode disabled."
+            );
+
+            return;
         }
+
+        /*
+         * Not in StaffMode.
+         * Save normal player data first.
+         */
+        savePlayer(
+                player,
+                file
+        );
+
+        enterStaffMode(player);
+
+        player.sendMessage(
+                ChatColor.AQUA
+                        + "Staff mode enabled."
+        );
     }
 
-    // Turns staff mode on or off for another online player.
-    public void toggleOther(Player sender, Player target) {
-        File targetFile = getPlayerFile(target);
+    /**
+     * Toggles StaffMode for another player.
+     */
+    public void toggleOther(
+            Player sender,
+            Player target
+    ) {
 
+        File targetFile =
+                getPlayerFile(target);
+
+        /*
+         * Disable StaffMode.
+         */
         if (targetFile.exists()) {
-            restorePlayer(target, targetFile);
-            target.sendMessage(ChatColor.RED + "Your staff mode was disabled.");
-            sender.sendMessage(ChatColor.GREEN + "Disabled staff mode for " + target.getName());
-        } else {
-            savePlayer(target, targetFile);
-            enterStaffMode(target);
-            target.sendMessage(ChatColor.AQUA + "Your staff mode was enabled.");
-            sender.sendMessage(ChatColor.GREEN + "Enabled staff mode for " + target.getName());
+
+            restorePlayer(
+                    target,
+                    targetFile
+            );
+
+            target.sendMessage(
+                    ChatColor.RED
+                            + "Your staff mode was disabled."
+            );
+
+            sender.sendMessage(
+                    ChatColor.GREEN
+                            + "Disabled staff mode for "
+                            + target.getName()
+            );
+
+            return;
         }
+
+        /*
+         * Enable StaffMode.
+         */
+        savePlayer(
+                target,
+                targetFile
+        );
+
+        enterStaffMode(target);
+
+        target.sendMessage(
+                ChatColor.AQUA
+                        + "Your staff mode was enabled."
+        );
+
+        sender.sendMessage(
+                ChatColor.GREEN
+                        + "Enabled staff mode for "
+                        + target.getName()
+        );
     }
 
-    // Saves the player's current inventory, location, game mode, health, food, flight state, experience, and potion effects before staff mode changes them.
-    public void savePlayer(Player player, File file) {
-        YamlConfiguration config = new YamlConfiguration();
+    /**
+     * Saves the player's normal state.
+     *
+     * This data is restored when StaffMode
+     * is disabled.
+     */
+    public void savePlayer(
+            Player player,
+            File file
+    ) {
 
-        config.set("inventory.contents", Arrays.asList(player.getInventory().getContents()));
-        config.set("inventory.armor", Arrays.asList(player.getInventory().getArmorContents()));
-        config.set("inventory.extra", Arrays.asList(player.getInventory().getExtraContents()));
-        config.set("inventory.heldslot", player.getInventory().getHeldItemSlot());
+        YamlConfiguration config =
+                new YamlConfiguration();
 
-        config.set("location", player.getLocation());
-        config.set("gamemode", player.getGameMode().name());
+        /*
+         * INVENTORY
+         */
+        config.set(
+                "inventory.contents",
+                Arrays.asList(
+                        player
+                                .getInventory()
+                                .getContents()
+                )
+        );
 
-        config.set("exp", player.getExp());
-        config.set("level", player.getLevel());
-        config.set("totalexp", player.getTotalExperience());
+        config.set(
+                "inventory.armor",
+                Arrays.asList(
+                        player
+                                .getInventory()
+                                .getArmorContents()
+                )
+        );
 
-        config.set("health", player.getHealth());
-        config.set("food", player.getFoodLevel());
-        config.set("saturation", player.getSaturation());
-        config.set("exhaustion", player.getExhaustion());
-        config.set("fireticks", player.getFireTicks());
-        config.set("falldistance", player.getFallDistance());
+        config.set(
+                "inventory.extra",
+                Arrays.asList(
+                        player
+                                .getInventory()
+                                .getExtraContents()
+                )
+        );
 
-        config.set("allowflight", player.getAllowFlight());
-        config.set("flying", player.isFlying());
+        config.set(
+                "inventory.heldslot",
+                player
+                        .getInventory()
+                        .getHeldItemSlot()
+        );
 
-        config.set("potions", new ArrayList<>(player.getActivePotionEffects()));
-        save(config, file);
+        /*
+         * LOCATION + GAME MODE
+         */
+        config.set(
+                "location",
+                player.getLocation()
+        );
+
+        config.set(
+                "gamemode",
+                player.getGameMode().name()
+        );
+
+        /*
+         * EXPERIENCE
+         */
+        config.set(
+                "exp",
+                player.getExp()
+        );
+
+        config.set(
+                "level",
+                player.getLevel()
+        );
+
+        config.set(
+                "totalexp",
+                player.getTotalExperience()
+        );
+
+        /*
+         * HEALTH / FOOD
+         */
+        config.set(
+                "health",
+                player.getHealth()
+        );
+
+        config.set(
+                "food",
+                player.getFoodLevel()
+        );
+
+        config.set(
+                "saturation",
+                player.getSaturation()
+        );
+
+        config.set(
+                "exhaustion",
+                player.getExhaustion()
+        );
+
+        config.set(
+                "fireticks",
+                player.getFireTicks()
+        );
+
+        config.set(
+                "falldistance",
+                player.getFallDistance()
+        );
+
+        /*
+         * FLIGHT
+         */
+        config.set(
+                "allowflight",
+                player.getAllowFlight()
+        );
+
+        config.set(
+                "flying",
+                player.isFlying()
+        );
+
+        /*
+         * POTION EFFECTS
+         */
+        config.set(
+                "potions",
+                new ArrayList<>(
+                        player.getActivePotionEffects()
+                )
+        );
+
+        save(
+                config,
+                file
+        );
     }
 
-    // Clears normal inventory/equipment, enables creative flight, normalizes survival values, and starts staff-hours tracking.
+    /**
+     * Initially enters StaffMode.
+     */
     public void enterStaffMode(Player player) {
-        player.getInventory().clear();
-        player.getInventory().setArmorContents(null);
-        player.getInventory().setExtraContents(null);
 
-        player.setGameMode(GameMode.CREATIVE);
+        /*
+         * Remove normal inventory.
+         */
+        clearStaffInventory(player);
+
+        /*
+         * StaffMode settings.
+         */
+        player.setGameMode(
+                GameMode.CREATIVE
+        );
+
         player.setAllowFlight(true);
         player.setFlying(true);
 
-        double maxHealth = Objects.requireNonNull(player.getAttribute(Attribute.MAX_HEALTH)).getValue();
+        double maxHealth =
+                Objects.requireNonNull(
+                        player.getAttribute(
+                                Attribute.MAX_HEALTH
+                        )
+                ).getValue();
 
-        player.setHealth(maxHealth);
-        player.setFoodLevel(20);
-        player.setSaturation(20);
-        player.setExhaustion(0);
-        player.setFireTicks(0);
-        player.setFallDistance(0);
+        player.setHealth(
+                maxHealth
+        );
 
-        staffHoursManager.startTrackingNow(player);
+        player.setFoodLevel(
+                20
+        );
+
+        player.setSaturation(
+                20
+        );
+
+        player.setExhaustion(
+                0
+        );
+
+        player.setFireTicks(
+                0
+        );
+
+        player.setFallDistance(
+                0
+        );
+
+        /*
+         * Start staff-hour tracking.
+         */
+        staffHoursManager
+                .startTrackingNow(player);
+
         player.updateInventory();
     }
 
-    // Restores the exact player state saved before staff mode and then clears temporary staff-mode state.
-    public void restorePlayer(Player player, File file) {
-        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+    /**
+     * Re-applies StaffMode without touching the
+     * player's saved normal inventory.
+     *
+     * This is important for Multiverse-Inventories.
+     *
+     * When Multiverse changes worlds it may put
+     * the player's normal inventory back.
+     *
+     * StaffMode calls this afterward to clear
+     * that inventory again.
+     */
+    public void reapplyStaffMode(Player player) {
 
-        List<?> contents = config.getList("inventory.contents");
-        List<?> armor = config.getList("inventory.armor");
-        List<?> extra = config.getList("inventory.extra");
+        /*
+         * Do nothing unless the player's StaffMode
+         * save file still exists.
+         */
+        if (!isInStaffMode(player)) {
+            return;
+        }
+
+        /*
+         * Clear whatever inventory Multiverse
+         * may have loaded.
+         */
+        clearStaffInventory(player);
+
+        /*
+         * Re-apply StaffMode settings.
+         */
+        player.setGameMode(
+                GameMode.CREATIVE
+        );
+
+        player.setAllowFlight(true);
+        player.setFlying(true);
+
+        player.setFallDistance(
+                0
+        );
+
+        player.setFireTicks(
+                0
+        );
+
+        player.updateInventory();
+    }
+
+    /**
+     * Clears inventory/equipment while
+     * StaffMode is active.
+     */
+    private void clearStaffInventory(
+            Player player
+    ) {
+
+        player
+                .getInventory()
+                .clear();
+
+        player
+                .getInventory()
+                .setArmorContents(null);
+
+        player
+                .getInventory()
+                .setExtraContents(null);
+    }
+
+    /**
+     * Restores the player's state from before
+     * they entered StaffMode.
+     */
+    public void restorePlayer(
+            Player player,
+            File file
+    ) {
+
+        YamlConfiguration config =
+                YamlConfiguration
+                        .loadConfiguration(file);
+
+        /*
+         * INVENTORY
+         */
+        List<?> contents =
+                config.getList(
+                        "inventory.contents"
+                );
+
+        List<?> armor =
+                config.getList(
+                        "inventory.armor"
+                );
+
+        List<?> extra =
+                config.getList(
+                        "inventory.extra"
+                );
 
         if (contents != null) {
-            player.getInventory().setContents(contents.toArray(new ItemStack[contents.size()]));
+
+            player
+                    .getInventory()
+                    .setContents(
+                            contents.toArray(
+                                    new ItemStack[
+                                            contents.size()
+                                            ]
+                            )
+                    );
         }
 
         if (armor != null) {
-            player.getInventory().setArmorContents(armor.toArray(new ItemStack[armor.size()]));
+
+            player
+                    .getInventory()
+                    .setArmorContents(
+                            armor.toArray(
+                                    new ItemStack[
+                                            armor.size()
+                                            ]
+                            )
+                    );
         }
 
         if (extra != null) {
-            player.getInventory().setExtraContents(extra.toArray(new ItemStack[extra.size()]));
+
+            player
+                    .getInventory()
+                    .setExtraContents(
+                            extra.toArray(
+                                    new ItemStack[
+                                            extra.size()
+                                            ]
+                            )
+                    );
         }
 
-        player.getInventory().setHeldItemSlot(config.getInt("inventory.heldslot"));
+        player
+                .getInventory()
+                .setHeldItemSlot(
+                        config.getInt(
+                                "inventory.heldslot"
+                        )
+                );
 
-        Location location = config.getLocation("location");
+        /*
+         * LOCATION
+         */
+        Location location =
+                config.getLocation(
+                        "location"
+                );
 
         if (location != null) {
-            player.teleport(location);
+
+            player.teleport(
+                    location
+            );
         }
 
-        player.setGameMode(GameMode.valueOf(config.getString("gamemode", "SURVIVAL")));
+        /*
+         * GAME MODE
+         */
+        String gameModeName =
+                config.getString(
+                        "gamemode",
+                        "SURVIVAL"
+                );
 
-        player.setExp((float) config.getDouble("exp"));
-        player.setLevel(config.getInt("level"));
-        player.setTotalExperience(config.getInt("totalexp"));
+        try {
 
-        double maxHealth = Objects.requireNonNull(player.getAttribute(Attribute.MAX_HEALTH)).getValue();
-        player.setHealth(Math.min(config.getDouble("health"), maxHealth));
+            player.setGameMode(
+                    GameMode.valueOf(
+                            gameModeName
+                    )
+            );
 
-        player.setFoodLevel(config.getInt("food"));
-        player.setSaturation((float) config.getDouble("saturation"));
-        player.setExhaustion((float) config.getDouble("exhaustion"));
-        player.setFireTicks(config.getInt("fireticks"));
-        player.setFallDistance((float) config.getDouble("falldistance"));
+        } catch (IllegalArgumentException exception) {
 
-        player.setAllowFlight(config.getBoolean("allowflight"));
-        player.setFlying(config.getBoolean("flying") && player.getAllowFlight());
-
-        for (PotionEffect effect : player.getActivePotionEffects()) {
-            player.removePotionEffect(effect.getType());
+            player.setGameMode(
+                    GameMode.SURVIVAL
+            );
         }
 
-        List<?> potionList = config.getList("potions");
+        /*
+         * EXPERIENCE
+         */
+        player.setExp(
+                (float) config.getDouble(
+                        "exp"
+                )
+        );
+
+        player.setLevel(
+                config.getInt(
+                        "level"
+                )
+        );
+
+        player.setTotalExperience(
+                config.getInt(
+                        "totalexp"
+                )
+        );
+
+        /*
+         * HEALTH
+         */
+        double maxHealth =
+                Objects.requireNonNull(
+                        player.getAttribute(
+                                Attribute.MAX_HEALTH
+                        )
+                ).getValue();
+
+        player.setHealth(
+                Math.min(
+                        config.getDouble(
+                                "health"
+                        ),
+                        maxHealth
+                )
+        );
+
+        player.setFoodLevel(
+                config.getInt(
+                        "food"
+                )
+        );
+
+        player.setSaturation(
+                (float) config.getDouble(
+                        "saturation"
+                )
+        );
+
+        player.setExhaustion(
+                (float) config.getDouble(
+                        "exhaustion"
+                )
+        );
+
+        player.setFireTicks(
+                config.getInt(
+                        "fireticks"
+                )
+        );
+
+        player.setFallDistance(
+                (float) config.getDouble(
+                        "falldistance"
+                )
+        );
+
+        /*
+         * FLIGHT
+         */
+        player.setAllowFlight(
+                config.getBoolean(
+                        "allowflight"
+                )
+        );
+
+        player.setFlying(
+                config.getBoolean(
+                        "flying"
+                )
+                        &&
+                        player.getAllowFlight()
+        );
+
+        /*
+         * POTION EFFECTS
+         */
+        for (
+                PotionEffect effect :
+                player.getActivePotionEffects()
+        ) {
+
+            player.removePotionEffect(
+                    effect.getType()
+            );
+        }
+
+        List<?> potionList =
+                config.getList(
+                        "potions"
+                );
 
         if (potionList != null) {
-            for (Object obj : potionList) {
-                if (obj instanceof PotionEffect effect) {
-                    player.addPotionEffect(effect);
+
+            for (Object object :
+                    potionList) {
+
+                if (object instanceof PotionEffect effect) {
+
+                    player.addPotionEffect(
+                            effect
+                    );
                 }
             }
         }
 
         player.updateInventory();
 
-        staffHoursManager.stopTracking(player);
-        file.delete();
-        dropEnabled.remove(player.getUniqueId());
-        pickupEnabled.remove(player.getUniqueId());
-        buildEnabled.remove(player.getUniqueId());
+        /*
+         * Stop StaffMode tracking.
+         */
+        staffHoursManager
+                .stopTracking(player);
+
+        /*
+         * Delete the StaffMode state file.
+         *
+         * Once this is deleted,
+         * isInStaffMode() becomes false.
+         */
+        if (!file.delete()) {
+
+            plugin
+                    .getLogger()
+                    .warning(
+                            "Could not delete StaffMode data file for "
+                                    + player.getName()
+                    );
+        }
+
+        /*
+         * Reset temporary toggles.
+         */
+        dropEnabled.remove(
+                player.getUniqueId()
+        );
+
+        pickupEnabled.remove(
+                player.getUniqueId()
+        );
+
+        buildEnabled.remove(
+                player.getUniqueId()
+        );
     }
 
-    // Toggles whether this staff member may drop items while in staff mode.
-    public boolean toggleDrop(Player player) {
+    /**
+     * Toggles item dropping.
+     */
+    public boolean toggleDrop(
+            Player player
+    ) {
+
         if (!isInStaffMode(player)) {
-            player.sendMessage(ChatColor.RED + "You must be in staff mode to toggle item dropping.");
+
+            player.sendMessage(
+                    ChatColor.RED
+                            + "You must be in staff mode to toggle item dropping."
+            );
+
             return true;
         }
 
-        if (!player.hasPermission("staffmode.drop")) {
-            player.sendMessage(ChatColor.RED + "You do not have permission to toggle item dropping.");
+        if (!player.hasPermission(
+                "staffmode.drop"
+        )) {
+
+            player.sendMessage(
+                    ChatColor.RED
+                            + "You do not have permission to toggle item dropping."
+            );
+
             return true;
         }
 
-        UUID uuid = player.getUniqueId();
+        UUID uuid =
+                player.getUniqueId();
 
         if (dropEnabled.contains(uuid)) {
+
             dropEnabled.remove(uuid);
-            player.sendMessage(ChatColor.RED + "Staff mode item dropping disabled.");
+
+            player.sendMessage(
+                    ChatColor.RED
+                            + "Staff mode item dropping disabled."
+            );
+
         } else {
+
             dropEnabled.add(uuid);
-            player.sendMessage(ChatColor.GREEN + "Staff mode item dropping enabled.");
+
+            player.sendMessage(
+                    ChatColor.GREEN
+                            + "Staff mode item dropping enabled."
+            );
         }
 
         return true;
     }
 
-    // Toggles whether this staff member may pick up items while in staff mode.
-    public boolean togglePickup(Player player) {
+    /**
+     * Toggles item pickup.
+     */
+    public boolean togglePickup(
+            Player player
+    ) {
+
         if (!isInStaffMode(player)) {
-            player.sendMessage(ChatColor.RED + "You must be in staff mode to toggle item pickup.");
+
+            player.sendMessage(
+                    ChatColor.RED
+                            + "You must be in staff mode to toggle item pickup."
+            );
+
             return true;
         }
 
-        if (!player.hasPermission("staffmode.pickup")) {
-            player.sendMessage(ChatColor.RED + "You do not have permission to toggle item pickup.");
+        if (!player.hasPermission(
+                "staffmode.pickup"
+        )) {
+
+            player.sendMessage(
+                    ChatColor.RED
+                            + "You do not have permission to toggle item pickup."
+            );
+
             return true;
         }
 
-        UUID uuid = player.getUniqueId();
+        UUID uuid =
+                player.getUniqueId();
 
         if (pickupEnabled.contains(uuid)) {
+
             pickupEnabled.remove(uuid);
-            player.sendMessage(ChatColor.RED + "Staff mode item pickup disabled.");
+
+            player.sendMessage(
+                    ChatColor.RED
+                            + "Staff mode item pickup disabled."
+            );
+
         } else {
+
             pickupEnabled.add(uuid);
-            player.sendMessage(ChatColor.GREEN + "Staff mode item pickup enabled.");
+
+            player.sendMessage(
+                    ChatColor.GREEN
+                            + "Staff mode item pickup enabled."
+            );
         }
 
         return true;
     }
 
-    // Toggles whether this staff member may build in the current world while in staff mode.
-    public boolean toggleBuild(Player player) {
+    /**
+     * Toggles building while in StaffMode.
+     */
+    public boolean toggleBuild(
+            Player player
+    ) {
+
         if (!isInStaffMode(player)) {
-            player.sendMessage(ChatColor.RED + "You must be in staff mode to toggle building.");
+
+            player.sendMessage(
+                    ChatColor.RED
+                            + "You must be in staff mode to toggle building."
+            );
+
             return true;
         }
 
-        String worldName = player.getWorld().getName();
+        String worldName =
+                player
+                        .getWorld()
+                        .getName();
 
-        if (!player.hasPermission("staffmode.build.*") && !player.hasPermission("staffmode.build." + worldName)) {
-            player.sendMessage(ChatColor.RED + "You do not have permission to build in this world.");
+        if (!player.hasPermission(
+                "staffmode.build.*"
+        )
+                &&
+                !player.hasPermission(
+                        "staffmode.build."
+                                + worldName
+                )) {
+
+            player.sendMessage(
+                    ChatColor.RED
+                            + "You do not have permission to build in this world."
+            );
+
             return true;
         }
 
-        UUID uuid = player.getUniqueId();
+        UUID uuid =
+                player.getUniqueId();
 
         if (buildEnabled.contains(uuid)) {
+
             buildEnabled.remove(uuid);
-            player.sendMessage(ChatColor.RED + "Staff mode building disabled.");
+
+            player.sendMessage(
+                    ChatColor.RED
+                            + "Staff mode building disabled."
+            );
+
         } else {
+
             buildEnabled.add(uuid);
-            player.sendMessage(ChatColor.GREEN + "Staff mode building enabled.");
+
+            player.sendMessage(
+                    ChatColor.GREEN
+                            + "Staff mode building enabled."
+            );
         }
 
         return true;
     }
 
-    // Checks both the temporary build toggle and the world-specific build permission.
-    public boolean canBuildInThisWorld(Player player) {
-        String worldName = player.getWorld().getName();
-        boolean hasWorldPermission = player.hasPermission("staffmode.build.*") || player.hasPermission("staffmode.build." + worldName);
-        return buildEnabled.contains(player.getUniqueId()) && hasWorldPermission;
+    /**
+     * Checks whether building is currently
+     * allowed in the player's world.
+     */
+    public boolean canBuildInThisWorld(
+            Player player
+    ) {
+
+        String worldName =
+                player
+                        .getWorld()
+                        .getName();
+
+        boolean hasWorldPermission =
+                player.hasPermission(
+                        "staffmode.build.*"
+                )
+                        ||
+                        player.hasPermission(
+                                "staffmode.build."
+                                        + worldName
+                        );
+
+        return buildEnabled.contains(
+                player.getUniqueId()
+        )
+                &&
+                hasWorldPermission;
     }
 
-    // Returns whether the player currently has the temporary staff-mode drop toggle enabled.
-    public boolean isDropEnabled(Player player) {
-        return dropEnabled.contains(player.getUniqueId());
+    /**
+     * Returns whether dropping is currently enabled.
+     */
+    public boolean isDropEnabled(
+            Player player
+    ) {
+
+        return dropEnabled.contains(
+                player.getUniqueId()
+        );
     }
 
-    // Returns whether the player currently has the temporary staff-mode pickup toggle enabled.
-    public boolean isPickupEnabled(Player player) {
-        return pickupEnabled.contains(player.getUniqueId());
+    /**
+     * Returns whether pickup is currently enabled.
+     */
+    public boolean isPickupEnabled(
+            Player player
+    ) {
+
+        return pickupEnabled.contains(
+                player.getUniqueId()
+        );
     }
 
-    // Writes the supplied YAML configuration to disk and logs an error if saving fails.
-    private void save(YamlConfiguration config, File file) {
+    /**
+     * Saves YAML safely.
+     */
+    private void save(
+            YamlConfiguration config,
+            File file
+    ) {
+
         try {
+
             config.save(file);
-        } catch (IOException e) {
-            e.printStackTrace();
+
+        } catch (IOException exception) {
+
+            plugin
+                    .getLogger()
+                    .severe(
+                            "Could not save StaffMode data for "
+                                    + file.getName()
+                    );
+
+            exception.printStackTrace();
         }
     }
 }
